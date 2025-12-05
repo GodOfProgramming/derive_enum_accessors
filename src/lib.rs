@@ -1,34 +1,18 @@
+#![doc = include_str!("../README.md")]
+
 use proc_macro_error::{abort, emit_warning, proc_macro_error};
 use proc_macro2::Ident;
 use quote::quote;
 use std::collections::{BTreeSet, HashMap};
 use syn::{Data, DeriveInput, Generics, Type, parse_macro_input};
 
-struct ItemType {
-    key: String,
-    value: Type,
-}
-
-impl PartialEq for ItemType {
-    fn eq(&self, other: &Self) -> bool {
-        self.key.eq(&other.key)
-    }
-}
-
-impl Eq for ItemType {}
-
-impl PartialOrd for ItemType {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for ItemType {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.key.cmp(&other.key)
-    }
-}
-
+/// Derive this on a series of enum struct variants to auto-generate methods
+/// that can access common fields if they all share the same name and type per
+/// variant.
+///
+/// Or an option if they share the same name.
+///
+/// If a type is different than that field will not be included.
 #[proc_macro_error]
 #[proc_macro_derive(EnumFieldAccessors)]
 pub fn enum_field_accessors(stream: proc_macro::TokenStream) -> proc_macro::TokenStream {
@@ -49,28 +33,25 @@ pub fn enum_field_accessors(stream: proc_macro::TokenStream) -> proc_macro::Toke
     // field names -> what type they are
     let mut field_types = HashMap::<_, BTreeSet<_>>::new();
 
-    for v in variants {
-        all_variant_names.insert(v.ident.clone());
+    for variant in variants {
+        all_variant_names.insert(variant.ident.clone());
 
-        if let syn::Fields::Named(fields) = v.fields {
+        if let syn::Fields::Named(fields) = variant.fields {
             for field in fields.named {
-                let ident = field.ident.expect("A named field should have a name");
+                let field_ident = field.ident.expect("A named field should have a name");
                 let field_type = &field.ty;
 
-                let entry = variant_fields.entry(ident.clone()).or_default();
-                entry.insert(v.ident.clone());
+                let entry = variant_fields.entry(field_ident.clone()).or_default();
+                entry.insert(variant.ident.clone());
 
-                let entry = field_types.entry(ident).or_default();
-                entry.insert(ItemType {
-                    key: quote! {#field_type}.to_string(),
-                    value: field_type.clone(),
+                let entry = field_types.entry(field_ident).or_default();
+                entry.insert(FieldType {
+                    type_string: quote! {#field_type}.to_string(),
+                    type_value: field_type.clone(),
                 });
             }
         } else {
-            emit_warning!(
-                v.fields,
-                "No fields will be generated for this type of enum"
-            );
+            emit_warning!(variant, "No fields will be generated for this type of enum");
         }
     }
 
@@ -96,7 +77,7 @@ pub fn enum_field_accessors(stream: proc_macro::TokenStream) -> proc_macro::Toke
 
         let is_common_name = *field_variants == all_variant_names;
 
-        let t = &field_type.value;
+        let t = &field_type.type_value;
 
         let (return_type, return_type_mut, return_value) = if is_common_name {
             (quote! { & #t }, quote! { &mut #t }, quote! { #field_name })
@@ -156,4 +137,29 @@ pub fn enum_field_accessors(stream: proc_macro::TokenStream) -> proc_macro::Toke
       }
     }
     .into()
+}
+
+struct FieldType {
+    type_string: String,
+    type_value: Type,
+}
+
+impl PartialEq for FieldType {
+    fn eq(&self, other: &Self) -> bool {
+        self.type_string.eq(&other.type_string)
+    }
+}
+
+impl Eq for FieldType {}
+
+impl PartialOrd for FieldType {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for FieldType {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.type_string.cmp(&other.type_string)
+    }
 }
