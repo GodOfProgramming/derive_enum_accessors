@@ -21,6 +21,11 @@ enum GenericFields<T, U> {
     V2 { value_t: T, value_u: U },
 }
 
+#[derive(EnumFieldAccessors)]
+enum LifetimeFields<'a> {
+    V1 { value_ref: &'a i32 },
+}
+
 fn main() {
     let identical = IdenticalFields::V1 { ivalue: 1 };
     assert_eq!(*identical.ivalue(), 1);
@@ -32,4 +37,8 @@ fn main() {
 
     *identical.ivalue_mut() = 3;
     assert_eq!(*identical.ivalue(), 3);
+
+    let lifetime = LifetimeFields::V1 { value_ref: &1 };
+
+    assert_eq!(lifetime.value_ref(), &&1);
 }
