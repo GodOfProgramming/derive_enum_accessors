@@ -15,6 +15,12 @@ enum MixedFields {
     V2 { fvalue: f32 },
 }
 
+#[derive(EnumFieldAccessors)]
+enum GenericFields<T, U> {
+    V1 { value_t: T },
+    V2 { value_t: T, value_u: U },
+}
+
 fn main() {
     let identical = IdenticalFields::V1 { ivalue: 1 };
     assert_eq!(*identical.ivalue(), 1);

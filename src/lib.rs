@@ -2,7 +2,7 @@ use proc_macro_error::{abort, emit_warning, proc_macro_error};
 use proc_macro2::Ident;
 use quote::quote;
 use std::collections::{BTreeSet, HashMap};
-use syn::{Data, DeriveInput, Type, parse_macro_input};
+use syn::{Data, DeriveInput, Generics, Type, parse_macro_input};
 
 struct ItemType {
     key: String,
@@ -38,7 +38,6 @@ pub fn enum_field_accessors(stream: proc_macro::TokenStream) -> proc_macro::Toke
         abort!(info.ident, "This derive must be used on an enum");
     };
 
-    let ident = info.ident;
     let variants = e.variants;
 
     // all variant names
@@ -143,8 +142,16 @@ pub fn enum_field_accessors(stream: proc_macro::TokenStream) -> proc_macro::Toke
         accessors.push(field_accessors);
     }
 
+    let ident = info.ident;
+    let Generics {
+        lt_token,
+        params,
+        gt_token,
+        where_clause,
+    } = info.generics;
+
     quote! {
-      impl #ident {
+      impl #lt_token #params #gt_token #ident #lt_token #params #gt_token #where_clause {
         #(#accessors)*
       }
     }
