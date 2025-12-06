@@ -8,6 +8,8 @@ If two or more variants share the same field name, but at least one type is diff
 
 If you want more control over accessors, use [enum_access](https://crates.io/crates/enum_access). This crate is meant for simplicity over configuration.
 
+See the [simple](./examples/simple.rs) example for usage.
+
 ## Why Not Tuples?
 
 I have the belief that if anyone finds `some_enum._0()` or worse `some_enum._0_mut()` to be readable, six months later they'll find out otherwise and this decision serves to help people from frustrating their future selves.
